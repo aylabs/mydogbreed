@@ -72,6 +72,10 @@ setup(
         'Topic :: Scientific/Engineering :: Image Recognition'
     ],
     install_requires=[
+        'numpy',
+        'tensorflow',
+        'IPython',
+        'pandas'
     ],
     scripts=[
           'bin/mydogbreed'
