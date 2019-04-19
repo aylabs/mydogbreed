@@ -108,3 +108,8 @@ venv.bak/
 !.idea/runConfigurations/
 
 learntools
+competition
+# https://www.kaggle.com/dansbecker/python-utility-code-for-deep-learning-exercises
+utils
+images
+models

@@ -75,7 +75,8 @@ setup(
         'numpy',
         'tensorflow',
         'IPython',
-        'pandas'
+        'pandas',
+        'pillow'
     ],
     scripts=[
           'bin/mydogbreed'
