@@ -26,6 +26,9 @@ import argparse
 import logging
 import sys
 
+import numpy as np
+import pandas as pd
+
 import dogbreed
 
 DOGBREED_USAGE_MSG = \
@@ -95,8 +98,65 @@ def parse_args():
 
     return parser.parse_args()
 
+def kaggle_sample_ml():
+    pass
 
-def kaggle_sample():
+def kaggle_digit_dl():
+    # Detecting hand written digits
+    # A new model is created from scratch
+    # The model can be improved changing: number of layers,
+    # kernel_size or filter in the convolution layers
+    # Download test data from:
+    # https://www.kaggle.com/c/digit-recognizer/download/test.csv
+    #
+
+    from sklearn.model_selection import train_test_split
+    from tensorflow.python import keras
+    from tensorflow.python.keras.models import Sequential
+    from tensorflow.python.keras.layers import Dense, Flatten, Conv2D, Dropout
+
+    DIR_TRAIN = "images/digits/train/"
+    DIR_TEST = "images/digits/test/"
+
+    img_rows, img_cols = 28, 28
+    num_classes = 10
+
+    def data_prep(raw):
+        out_y = keras.utils.to_categorical(raw.label, num_classes)
+
+        num_images = raw.shape[0]
+        x_as_array = raw.values[:, 1:]
+        x_shaped_array = x_as_array.reshape(num_images, img_rows, img_cols, 1)
+        out_x = x_shaped_array / 255
+        return out_x, out_y
+
+    train_file = DIR_TRAIN + "train.csv"
+    raw_data = pd.read_csv(train_file)
+
+    x, y = data_prep(raw_data)
+
+    model = Sequential()
+    model.add(Conv2D(20, kernel_size=(3, 3),
+                     activation='relu',
+                     input_shape=(img_rows, img_cols, 1)))
+    model.add(Conv2D(20, kernel_size=(3, 3), activation='relu'))
+    model.add(Flatten())
+    model.add(Dense(128, activation='relu'))
+    model.add(Dense(num_classes, activation='softmax'))
+
+    model.compile(loss=keras.losses.categorical_crossentropy,
+                  optimizer='adam',
+                  metrics=['accuracy'])
+    model.fit(x, y,
+              batch_size=128,
+              epochs=2,
+              validation_split=0.2)
+
+def kaggle_sample_dl():
+    # For deep learning we must to cover
+    # Howto to use pre created models
+    # Howto use transfer learning to reuse models in new similar topics
+    # Howto create new models
     from os.path import join
 
     img_paths = [join(IMAGE_DIR_TRAIN, filename) for filename in
@@ -105,7 +165,8 @@ def kaggle_sample():
                   '8825e914555803f4c67b26593c9d5aff.jpg',
                   '91a5e8db15bccfb6cfa2df5e8b95ec03.jpg']]
 
-    import numpy as np
+    img_paths_mina = ["images/mina/mina1.jpg"]
+
     from tensorflow.python.keras.applications.resnet50 import preprocess_input
     from tensorflow.python.keras.preprocessing.image import load_img, img_to_array
 
@@ -124,14 +185,12 @@ def kaggle_sample():
     preds = my_model.predict(test_data)
 
     from learntools.deep_learning.decode_predictions import decode_predictions
-    from IPython.display import display
     from PIL import Image
 
     most_likely_labels = decode_predictions(preds, top=3, class_list_path=RESNET_JSON)
 
     for i, img_path in enumerate(img_paths):
-        # display(Image(img_path))
-        print(img_path)
+        Image.open(img_path).show()
         print(most_likely_labels[i])
 
 
@@ -146,7 +205,8 @@ def main():
     # Load the prediction model
     # Predict the breed and show it visually
 
-    kaggle_sample()
+    # kaggle_sample_dl()
+    kaggle_digit_dl()
 
     logging.info("Breed detection finished.")
 

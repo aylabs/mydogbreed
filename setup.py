@@ -76,7 +76,8 @@ setup(
         'tensorflow',
         'IPython',
         'pandas',
-        'pillow'
+        'pillow',
+        'scikit-learn'
     ],
     scripts=[
           'bin/mydogbreed'
