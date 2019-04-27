@@ -116,7 +116,7 @@ def kaggle_digit_dl():
     from tensorflow.python.keras.layers import Dense, Flatten, Conv2D, Dropout
 
     DIR_TRAIN = "images/digits/train/"
-    DIR_TEST = "images/digits/test/"
+    # DIR_TEST = "images/digits/test/"
 
     img_rows, img_cols = 28, 28
     num_classes = 10
@@ -135,18 +135,22 @@ def kaggle_digit_dl():
 
     x, y = data_prep(raw_data)
 
+    # Creating a new sequential neural model
     model = Sequential()
     model.add(Conv2D(20, kernel_size=(3, 3),
                      activation='relu',
                      input_shape=(img_rows, img_cols, 1)))
     model.add(Conv2D(20, kernel_size=(3, 3), activation='relu'))
     model.add(Flatten())
+    # Helper layer than improve the predictions
     model.add(Dense(128, activation='relu'))
+    # Output layer, with num_classes predictions
     model.add(Dense(num_classes, activation='softmax'))
 
     model.compile(loss=keras.losses.categorical_crossentropy,
                   optimizer='adam',
                   metrics=['accuracy'])
+    # x training data, y predictions
     model.fit(x, y,
               batch_size=128,
               epochs=2,
