@@ -44,11 +44,14 @@ MLSAMPLES_LOG_FORMAT = "[%(asctime)s] - %(message)s"
 MLSAMPLES_DEBUG_LOG_FORMAT = "[%(asctime)s - %(name)s - %(levelname)s] - %(message)s"
 
 # Pre-trained model to be used
-RESNET_DIR = "../models/resnet50"
+MODELS_DIR = "models"
+RESNET_DIR = MODELS_DIR + "/resnet50"
 RESNET_H5 = RESNET_DIR + "/resnet50_weights_tf_dim_ordering_tf_kernels.h5"
 RESNET_JSON = RESNET_DIR + "/imagenet_class_index.json"
 
-IMAGES_DIR = "../images"
+DATA_DIR = "data"
+
+IMAGES_DIR = "images"
 IMAGE_DIR_TRAIN = IMAGES_DIR + "/train/"
 IMAGE_DIR_TEST = IMAGES_DIR + "/test/"
 
@@ -102,8 +105,8 @@ def kaggle_sample2_ml():
 
     # Data from: https://www.kaggle.com/c/home-data-for-ml-course/data
     # Read the data
-    X_full = pd.read_csv('data/input/home-data-for-ml-course/train.csv', index_col='Id')
-    X_test_full = pd.read_csv('data/input/home-data-for-ml-course/test.csv', index_col='Id')
+    X_full = pd.read_csv(DATA_DIR + '/input/home-data-for-ml-course/train.csv', index_col='Id')
+    X_test_full = pd.read_csv(DATA_DIR + '/input/home-data-for-ml-course/test.csv', index_col='Id')
 
     # Obtain target and predictors
     print(X_full.columns)
@@ -170,7 +173,7 @@ def kaggle_sample_ml():
 
     # Sample on predicting houses prices with ML
     # https://www.kaggle.com/dansbecker/melbourne-housing-snapshot/downloads/melb_data.csv/5
-    melbourne_file_path = 'data/input/melbourne-housing-snapshot/melb_data.csv'
+    melbourne_file_path = DATA_DIR + '/input/melbourne-housing-snapshot/melb_data.csv'
     melbourne_data = pd.read_csv(melbourne_file_path)
     print(melbourne_data.columns)
     # dropna drops missing values (think of na as "not available")
