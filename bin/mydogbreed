@@ -26,6 +26,9 @@ import argparse
 import logging
 import sys
 
+import numpy as np
+import pandas as pd
+
 import dogbreed
 
 DOGBREED_USAGE_MSG = \
@@ -95,8 +98,20 @@ def parse_args():
 
     return parser.parse_args()
 
+# Function for comparing different models
+def score_model(model, X_train, X_valid, y_train, y_valid):
+    from sklearn.metrics import mean_absolute_error
 
-def kaggle_sample():
+    model.fit(X_train, y_train)
+    preds = model.predict(X_valid)
+    return mean_absolute_error(y_valid, preds)
+
+
+def find_dog_breads():
+    # For deep learning we must to cover
+    # Howto to use pre created models
+    # Howto use transfer learning to reuse models in new similar topics
+    # Howto create new models
     from os.path import join
 
     img_paths = [join(IMAGE_DIR_TRAIN, filename) for filename in
@@ -105,7 +120,8 @@ def kaggle_sample():
                   '8825e914555803f4c67b26593c9d5aff.jpg',
                   '91a5e8db15bccfb6cfa2df5e8b95ec03.jpg']]
 
-    import numpy as np
+    img_paths_mina = ["images/mina/mina1.jpg"]
+
     from tensorflow.python.keras.applications.resnet50 import preprocess_input
     from tensorflow.python.keras.preprocessing.image import load_img, img_to_array
 
@@ -124,14 +140,12 @@ def kaggle_sample():
     preds = my_model.predict(test_data)
 
     from learntools.deep_learning.decode_predictions import decode_predictions
-    from IPython.display import display
     from PIL import Image
 
     most_likely_labels = decode_predictions(preds, top=3, class_list_path=RESNET_JSON)
 
     for i, img_path in enumerate(img_paths):
-        # display(Image(img_path))
-        print(img_path)
+        Image.open(img_path).show()
         print(most_likely_labels[i])
 
 
@@ -146,7 +160,7 @@ def main():
     # Load the prediction model
     # Predict the breed and show it visually
 
-    kaggle_sample()
+    find_dog_breads()
 
     logging.info("Breed detection finished.")
 
