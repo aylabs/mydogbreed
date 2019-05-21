@@ -64,7 +64,7 @@ IMAGE_DIR_TEST = IMAGES_DIR + "/test/"
 
 def configure_logging(debug=True):
     """Configure MyMLSAMPLES logging
-    The function configures the log messages produced by machine_learning.
+    The function configures the log messages produced by machine_learning.py.
     By default, log messages are sent to stderr. Set the parameter
     `debug` to activate the debug mode.
     :param debug: set the debug mode
@@ -95,64 +95,89 @@ def parse_args():
 
 
 # Function for comparing different models
-def score_model(model, X_train, X_valid, y_train, y_valid):
+def score_model(model, x_train, x_valid, y_train, y_valid):
     from sklearn.metrics import mean_absolute_error
 
-    model.fit(X_train, y_train)
-    preds = model.predict(X_valid)
+    model.fit(x_train, y_train)
+    preds = model.predict(x_valid)
     return mean_absolute_error(y_valid, preds)
 
 
 # Function for comparing different approaches
-def score_dataset(X_train, X_valid, y_train, y_valid):
+def score_dataset(x_train, x_valid, y_train, y_valid):
     model = RandomForestRegressor(n_estimators=100, random_state=0)
-    model.fit(X_train, y_train)
-    preds = model.predict(X_valid)
+    model.fit(x_train, y_train)
+    preds = model.predict(x_valid)
     return mean_absolute_error(y_valid, preds)
+
+
+def impute_data(x_train, x_valid, strategy="mean"):
+    """
+    Fill the null values with imputed values
+    :param x_train: data for training
+    :param x_valid: data for validation
+    :param strategy: strategy to fill the gaps ('mean', 'median', 'most_frequent', 'constant')
+    :return: the non empty data for training  and validation
+    """
+
+    # Imputation
+    my_imputer = SimpleImputer(strategy=strategy)
+    imputed_x_train = pd.DataFrame(my_imputer.fit_transform(x_train))
+    imputed_x_valid = pd.DataFrame(my_imputer.transform(x_valid))
+
+    # Imputation removed column names; put them back
+    imputed_x_train.columns = x_train.columns
+    imputed_x_valid.columns = x_valid.columns
+
+    return imputed_x_train, imputed_x_valid
+
 
 def handle_missing_values():
     # The goal is to show the different strategies for handling features with missing values
     # Strategies: drop the feature values (column), fill with a default value (imputation) and imputation+mark it
 
     # Read the data
-    X_full = pd.read_csv(DATA_DIR + '/input/home-data-for-ml-course/train.csv', index_col='Id')
-    X_test_full = pd.read_csv(DATA_DIR + '/input/home-data-for-ml-course/test.csv', index_col='Id')
+    x_full = pd.read_csv(DATA_DIR + '/input/home-data-for-ml-course/train.csv', index_col='Id')
+    x_test_full = pd.read_csv(DATA_DIR + '/input/home-data-for-ml-course/test.csv', index_col='Id')
 
     # Remove rows with missing target, separate target from predictors
-    X_full.dropna(axis=0, subset=['SalePrice'], inplace=True)
-    y = X_full.SalePrice
-    X_full.drop(['SalePrice'], axis=1, inplace=True)
+    x_full.dropna(axis=0, subset=['SalePrice'], inplace=True)
+    y = x_full.SalePrice
+    x_full.drop(['SalePrice'], axis=1, inplace=True)
 
     # To keep things simple, we'll use only numerical predictors
-    X = X_full.select_dtypes(exclude=['object'])
-    X_test = X_test_full.select_dtypes(exclude=['object'])
+    X = x_full.select_dtypes(exclude=['object'])
+    x_test = x_test_full.select_dtypes(exclude=['object'])
 
     # Break off validation set from training data
-    X_train, X_valid, y_train, y_valid = train_test_split(X, y, train_size=0.8, test_size=0.2,
+    x_train, x_valid, y_train, y_valid = train_test_split(X, y, train_size=0.8, test_size=0.2,
                                                           random_state=0)
 
     # Drop columns with missing values
-    cols_with_missing = [col for col in X_train.columns
-                         if X_train[col].isnull().any()]
+    cols_with_missing = [col for col in x_train.columns
+                         if x_train[col].isnull().any()]
 
     # Fill in the lines below: drop columns in training and validation data
-    reduced_X_train = X_train.drop(cols_with_missing, axis=1)
-    reduced_X_valid = X_valid.drop(cols_with_missing, axis=1)
+    reduced_x_train = x_train.drop(cols_with_missing, axis=1)
+    reduced_x_valid = x_valid.drop(cols_with_missing, axis=1)
 
     print("MAE (Drop columns with missing values):")
-    print(score_dataset(reduced_X_train, reduced_X_valid, y_train, y_valid))
+    print(score_dataset(reduced_x_train, reduced_x_valid, y_train, y_valid))
 
     # Imputation
-    my_imputer = SimpleImputer()
-    imputed_X_train = pd.DataFrame(my_imputer.fit_transform(X_train))
-    imputed_X_valid = pd.DataFrame(my_imputer.transform(X_valid))
+    imputed_x_train, imputed_x_valid = impute_data(x_train, x_valid)
+    print("MAE (Imputation default):")
+    print(score_dataset(imputed_x_train, imputed_x_valid, y_train, y_valid))
 
-    # Imputation removed column names; put them back
-    imputed_X_train.columns = X_train.columns
-    imputed_X_valid.columns = X_valid.columns
+    # Check with another strategy for Imputation
+    final_x_train, final_x_valid = impute_data(x_train, x_valid, 'median')
+    print("MAE (Imputation median):")
+    print(score_dataset(final_x_train, final_x_valid, y_train, y_valid))
 
-    print("MAE (Imputation):")
-    print(score_dataset(imputed_X_train, imputed_X_valid, y_train, y_valid))
+    # Check with another strategy for Imputation
+    final_x_train, final_x_valid = impute_data(x_train, x_valid, 'most_frequent')
+    print("MAE (Imputation most_frequent):")
+    print(score_dataset(final_x_train, final_x_valid, y_train, y_valid))
 
 
 def kaggle_sample2_ml():
@@ -161,22 +186,22 @@ def kaggle_sample2_ml():
 
     # Data from: https://www.kaggle.com/c/home-data-for-ml-course/data
     # Read the data
-    X_full = pd.read_csv(DATA_DIR + '/input/home-data-for-ml-course/train.csv', index_col='Id')
-    X_test_full = pd.read_csv(DATA_DIR + '/input/home-data-for-ml-course/test.csv', index_col='Id')
+    x_full = pd.read_csv(DATA_DIR + '/input/home-data-for-ml-course/train.csv', index_col='Id')
+    x_test_full = pd.read_csv(DATA_DIR + '/input/home-data-for-ml-course/test.csv', index_col='Id')
 
     # Obtain target and predictors
-    print(X_full.columns)
+    print(x_full.columns)
 
-    y = X_full.SalePrice
+    y = x_full.SalePrice
     features = ['LotArea', 'YearBuilt', '1stFlrSF', '2ndFlrSF', 'FullBath', 'BedroomAbvGr', 'TotRmsAbvGrd']
     features += ['KitchenAbvGr']
-    X = X_full[features].copy()
-    X_test = X_test_full[features].copy()
+    X = x_full[features].copy()
+    x_test = x_test_full[features].copy()
 
     # Break off validation set from training data
-    X_train, X_valid, y_train, y_valid = train_test_split(X, y, train_size=0.8, test_size=0.2,
+    x_train, x_valid, y_train, y_valid = train_test_split(X, y, train_size=0.8, test_size=0.2,
                                                           random_state=0)
-    print(X_train.head())
+    print(x_train.head())
 
     # Evaluate several models
     from sklearn.ensemble import RandomForestRegressor
@@ -192,7 +217,7 @@ def kaggle_sample2_ml():
 
     print("Evaluating between different RandomForestRegressor")
     for i in range(0, len(models)):
-        mae = score_model(models[i], X_train, X_valid, y_train, y_valid)
+        mae = score_model(models[i], x_train, x_valid, y_train, y_valid)
         print("Model %d MAE: %d" % (i + 1, mae))
 
     model_31 = RandomForestRegressor(n_estimators=80, criterion='mae', random_state=0)
@@ -207,7 +232,7 @@ def kaggle_sample2_ml():
 
     print("Evaluating in the same RandomForestRegressor with <>n_estimators")
     for i in range(0, len(models3)):
-        mae = score_model(models3[i], X_train, X_valid, y_train, y_valid)
+        mae = score_model(models3[i], x_train, x_valid, y_train, y_valid)
         print("Model %d MAE: %d" % (i + 1, mae))
 
     my_model = model_3
@@ -216,10 +241,10 @@ def kaggle_sample2_ml():
     my_model.fit(X, y)
 
     # Generate test predictions
-    preds_test = my_model.predict(X_test)
+    preds_test = my_model.predict(x_test)
 
     # Save predictions in format used for competition scoring
-    output = pd.DataFrame({'Id': X_test.index,
+    output = pd.DataFrame({'Id': x_test.index,
                            'SalePrice': preds_test})
     output.to_csv('submission.csv', index=False)
 
@@ -383,19 +408,94 @@ def kaggle_sample_dl():
         print(most_likely_labels[i])
 
 
+def handle_categorical():
+    # Different approaches for managing categories in the data and their impact in the MAE
+    # Read the data
+    x = pd.read_csv(DATA_DIR + '/input/home-data-for-ml-course/train.csv', index_col='Id')
+    x_test = pd.read_csv(DATA_DIR + '/input/home-data-for-ml-course/test.csv', index_col='Id')
+
+    # Remove rows with missing target, separate target from predictors
+    x.dropna(axis=0, subset=['SalePrice'], inplace=True)
+    y = x.SalePrice
+    x.drop(['SalePrice'], axis=1, inplace=True)
+
+    # To keep things simple, we'll drop columns with missing values
+    cols_with_missing = [col for col in x.columns if x[col].isnull().any()]
+    x.drop(cols_with_missing, axis=1, inplace=True)
+    x_test.drop(cols_with_missing, axis=1, inplace=True)
+
+    # Break off validation set from training data
+    x_train, x_valid, y_train, y_valid = train_test_split(x, y, train_size=0.8, test_size=0.2,
+                                                          random_state=0)
+    # Get list of categorical variables
+    s = (x_train.dtypes == 'object')
+    object_cols = list(s[s].index)
+
+    print("Categorical variables:")
+    print(object_cols)
+
+    # Score from Approach 1 (Drop Categorical Variables)
+    drop_x_train = x_train.select_dtypes(exclude=['object'])
+    drop_x_valid = x_valid.select_dtypes(exclude=['object'])
+
+    print("MAE from Approach 1 (Drop categorical variables):")
+    print(score_dataset(drop_x_train, drop_x_valid, y_train, y_valid))
+
+    # Score from Approach 2 (Label Encoding)
+    from sklearn.preprocessing import LabelEncoder
+
+    # Make copy to avoid changing original data
+    label_x_train = x_train.copy()
+    label_x_valid = x_valid.copy()
+
+    # Apply label encoder to each column with categorical data
+    label_encoder = LabelEncoder()
+    for col in object_cols:
+        label_x_train[col] = label_encoder.fit_transform(x_train[col])
+        # Not working because x_valid has extra categories, so fit must be used
+        # label_x_valid[col] = label_encoder.transform(x_valid[col])
+        label_x_valid[col] = label_encoder.fit_transform(x_valid[col])
+
+    print("MAE from Approach 2 (Label Encoding):")
+    print(score_dataset(label_x_train, label_x_valid, y_train, y_valid))
+
+    from sklearn.preprocessing import OneHotEncoder
+
+    # Apply one-hot encoder to each column with categorical data
+    oh_encoder = OneHotEncoder(handle_unknown='ignore', sparse=False)
+    oh_cols_train = pd.DataFrame(oh_encoder.fit_transform(x_train[object_cols]))
+    oh_cols_valid = pd.DataFrame(oh_encoder.transform(x_valid[object_cols]))
+
+    # One-hot encoding removed index; put it back
+    oh_cols_train.index = x_train.index
+    oh_cols_valid.index = x_valid.index
+
+    # Remove categorical columns (will replace with one-hot encoding)
+    num_x_train = x_train.drop(object_cols, axis=1)
+    num_x_valid = x_valid.drop(object_cols, axis=1)
+
+    # Add one-hot encoded columns to numerical features
+    oh_x_train = pd.concat([num_x_train, oh_cols_train], axis=1)
+    oh_x_valid = pd.concat([num_x_valid, oh_cols_valid], axis=1)
+
+    print("MAE from Approach 3 (One-Hot Encoding):")
+    print(score_dataset(oh_x_train, oh_x_valid, y_train, y_valid))
+
+
 def main():
     args = parse_args()
 
     configure_logging()
 
-    logging.info("Starting machine_learning samples.")
+    logging.info("Starting machine_learning.py samples.")
 
     # TODO: add params to execute a specific sample
     # kaggle_sample_dl()
     # kaggle_digit_dl()
     # kaggle_sample_ml()
     # kaggle_sample2_ml()
-    handle_missing_values()
+    # handle_missing_values()
+    handle_categorical()
 
     logging.info("Samples execution finished..")
 
