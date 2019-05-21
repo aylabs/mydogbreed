@@ -428,15 +428,13 @@ def handle_categorical():
     x_train, x_valid, y_train, y_valid = train_test_split(x, y, train_size=0.8, test_size=0.2,
                                                           random_state=0)
     # Get list of categorical variables
-    s = (x_train.dtypes == 'object')
-    object_cols = list(s[s].index)
-
+    object_cols = [col for col in x_train.columns if x_train[col].dtype == "object"]
     print("Categorical variables:")
     print(object_cols)
 
     # Score from Approach 1 (Drop Categorical Variables)
-    drop_x_train = x_train.select_dtypes(exclude=['object'])
-    drop_x_valid = x_valid.select_dtypes(exclude=['object'])
+    drop_x_train = x_train.drop(object_cols, axis=1)
+    drop_x_valid = x_valid.drop(object_cols, axis=1)
 
     print("MAE from Approach 1 (Drop categorical variables):")
     print(score_dataset(drop_x_train, drop_x_valid, y_train, y_valid))
