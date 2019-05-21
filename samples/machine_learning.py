@@ -448,21 +448,50 @@ def handle_categorical():
 
     # Apply label encoder to each column with categorical data
     label_encoder = LabelEncoder()
-    for col in object_cols:
+
+    # Explore category columns to check all the categories are shared between train and valid data
+    # Columns that can be safely label encoded
+    good_label_cols = [col for col in object_cols if
+                       set(x_train[col]) == set(x_valid[col])]
+
+    # Problematic columns that will be dropped from the dataset
+    bad_label_cols = list(set(object_cols) - set(good_label_cols))
+
+    label_x_train = label_x_train.drop(bad_label_cols, axis=1)
+    label_x_valid = label_x_valid.drop(bad_label_cols, axis=1)
+
+    for col in good_label_cols:
         label_x_train[col] = label_encoder.fit_transform(x_train[col])
-        # Not working because x_valid has extra categories, so fit must be used
-        # label_x_valid[col] = label_encoder.transform(x_valid[col])
-        label_x_valid[col] = label_encoder.fit_transform(x_valid[col])
+        label_x_valid[col] = label_encoder.transform(x_valid[col])
 
     print("MAE from Approach 2 (Label Encoding):")
     print(score_dataset(label_x_train, label_x_valid, y_train, y_valid))
 
     from sklearn.preprocessing import OneHotEncoder
 
+    # Categorical metrics
+    # Get number of unique entries in each column with categorical data
+    object_nunique = list(map(lambda col: x_train[col].nunique(), object_cols))
+    d = dict(zip(object_cols, object_nunique))
+
+    # Print number of unique entries by column, in ascending order
+    print(sorted(d.items(), key=lambda x: x[1]))
+
     # Apply one-hot encoder to each column with categorical data
+    # but only for columns with cardinality < 10
+
     oh_encoder = OneHotEncoder(handle_unknown='ignore', sparse=False)
-    oh_cols_train = pd.DataFrame(oh_encoder.fit_transform(x_train[object_cols]))
-    oh_cols_valid = pd.DataFrame(oh_encoder.transform(x_valid[object_cols]))
+
+    # Columns that will be one-hot encoded
+    low_cardinality_cols = [col for col in object_cols if x_train[col].nunique() < 10]
+    # Columns that will be dropped from the dataset
+    high_cardinality_cols = list(set(object_cols) - set(low_cardinality_cols))
+
+    low_x_train = x_train.drop(high_cardinality_cols, axis=1)
+    low_x_valid = x_valid.drop(high_cardinality_cols, axis=1)
+
+    oh_cols_train = pd.DataFrame(oh_encoder.fit_transform(low_x_train[low_cardinality_cols]))
+    oh_cols_valid = pd.DataFrame(oh_encoder.transform(low_x_valid[low_cardinality_cols]))
 
     # One-hot encoding removed index; put it back
     oh_cols_train.index = x_train.index
