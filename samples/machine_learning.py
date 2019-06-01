@@ -35,6 +35,10 @@ from sklearn.impute import SimpleImputer
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import train_test_split
 
+from sklearn.preprocessing import OneHotEncoder
+
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
 
 MLSAMPLES_USAGE_MSG = \
     """%(prog)s [-g] [<args>] | --help"""
@@ -467,8 +471,6 @@ def handle_categorical():
     print("MAE from Approach 2 (Label Encoding):")
     print(score_dataset(label_x_train, label_x_valid, y_train, y_valid))
 
-    from sklearn.preprocessing import OneHotEncoder
-
     # Categorical metrics
     # Get number of unique entries in each column with categorical data
     object_nunique = list(map(lambda col: x_train[col].nunique(), object_cols))
@@ -509,6 +511,104 @@ def handle_categorical():
     print(score_dataset(oh_x_train, oh_x_valid, y_train, y_valid))
 
 
+def use_pipelines():
+
+    # Read the data
+    x_full = pd.read_csv(DATA_DIR + '/input/home-data-for-ml-course/train.csv', index_col='Id')
+    x_test_full = pd.read_csv(DATA_DIR + '/input/home-data-for-ml-course/test.csv', index_col='Id')
+
+
+    # Remove rows with missing target, separate target from predictors
+    x_full.dropna(axis=0, subset=['SalePrice'], inplace=True)
+    y = x_full.SalePrice
+    x_full.drop(['SalePrice'], axis=1, inplace=True)
+
+    # Break off validation set from training data
+    x_train_full, x_valid_full, y_train, y_valid = train_test_split(x_full, y,
+                                                                    train_size=0.8, test_size=0.2,
+                                                                    random_state=0)
+
+    # "Cardinality" means the number of unique values in a column
+    # Select categorical columns with relatively low cardinality (convenient but arbitrary)
+    categorical_cols = [cname for cname in x_train_full.columns if
+                        x_train_full[cname].nunique() < 10 and
+                        x_train_full[cname].dtype == "object"]
+
+    # Select numerical columns
+    numerical_cols = [cname for cname in x_train_full.columns if
+                      x_train_full[cname].dtype in ['int64', 'float64']]
+
+    # Keep selected columns only
+    my_cols = categorical_cols + numerical_cols
+    x_train = x_train_full[my_cols].copy()
+    x_valid = x_valid_full[my_cols].copy()
+    x_test = x_test_full[my_cols].copy()
+
+    # Preprocessing for numerical data
+    numerical_transformer = SimpleImputer(strategy='constant')
+
+    # Preprocessing for categorical data
+    categorical_transformer = Pipeline(steps=[
+        ('imputer', SimpleImputer(strategy='most_frequent')),
+        ('onehot', OneHotEncoder(handle_unknown='ignore'))
+    ])
+
+    # Bundle preprocessing for numerical and categorical data
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('num', numerical_transformer, numerical_cols),
+            ('cat', categorical_transformer, categorical_cols)
+        ])
+
+    # Define model
+    model = RandomForestRegressor(n_estimators=100, random_state=0)
+
+    # Bundle preprocessing and modeling code in a pipeline
+    clf = Pipeline(steps=[('preprocessor', preprocessor),
+                          ('model', model)
+                          ])
+
+    # Preprocessing of training data, fit model
+    clf.fit(x_train, y_train)
+
+    # Preprocessing of validation data, get predictions
+    preds = clf.predict(x_valid)
+
+    print('MAE:', mean_absolute_error(y_valid, preds))
+
+
+def use_crossvalidation():
+
+    # Read the data
+    train_data = pd.read_csv(DATA_DIR + '/input/home-data-for-ml-course/train.csv', index_col='Id')
+    test_data = pd.read_csv(DATA_DIR + '/input/home-data-for-ml-course/test.csv', index_col='Id')
+
+    # Remove rows with missing target, separate target from predictors
+    train_data.dropna(axis=0, subset=['SalePrice'], inplace=True)
+    y = train_data.SalePrice
+    train_data.drop(['SalePrice'], axis=1, inplace=True)
+
+    # Select numerical columns
+    numeric_cols = [cname for cname in train_data.columns if
+                      train_data[cname].dtype in ['int64', 'float64']]
+    X = train_data[numeric_cols].copy()
+    X_test = test_data[numeric_cols].copy()
+
+    my_pipeline = Pipeline(steps=[
+        ('preprocessor', SimpleImputer()),
+        ('model', RandomForestRegressor(n_estimators=50, random_state=0))
+    ])
+
+    from sklearn.model_selection import cross_val_score
+
+    # Multiply by -1 since sklearn calculates *negative* MAE
+    scores = -1 * cross_val_score(my_pipeline, X, y,
+                                  cv=50,
+                                  scoring='neg_mean_absolute_error')
+
+    print("Average MAE score:", scores.mean())
+
+
 def main():
     args = parse_args()
 
@@ -522,7 +622,9 @@ def main():
     # kaggle_sample_ml()
     # kaggle_sample2_ml()
     # handle_missing_values()
-    handle_categorical()
+    # handle_categorical()
+    # use_pipelines()
+    use_crossvalidation()
 
     logging.info("Samples execution finished..")
 
