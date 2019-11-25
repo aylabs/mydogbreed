@@ -72,12 +72,14 @@ setup(
         'Topic :: Scientific/Engineering :: Image Recognition'
     ],
     install_requires=[
-        'numpy',
-        'tensorflow',
         'IPython',
+        'keras',
+        'matplotlib',
+        'numpy',
         'pandas',
         'pillow',
-        'scikit-learn'
+        'scikit-learn',
+        'tensorflow'
     ],
     scripts=[
           'bin/mydogbreed'
